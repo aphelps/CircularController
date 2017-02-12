@@ -1,21 +1,23 @@
+/*
+ *
+ */
+
 #include "FastLED.h"
+
+#define DEBUG_LEVEL DEBUG_HIGH
 #include "Debug.h"
 
 #include "MPR121.h"
 #include <Wire.h>
 
+#include "Bringup.h"
+
 MPR121 touch;
 
-#define I2C_ADDRESS 0x5A // 0x5A - 0x5D
-#define IRQ_PIN 2
-
-#define DEBUG_LED_PIN 13
 
 // Define the array of leds
-#define NUM_LEDS 16
 CRGB leds[NUM_LEDS];
 
-#define NUM_LEDS_IN_CIRCLE 12
 
 void setup() {
   Serial.begin(57600);
@@ -38,12 +40,16 @@ void setup() {
 #ifdef PIXELS_APA102_12_8
   FastLED.addLeds<APA102, 12, 8, BGR>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
 #endif
-#ifdef PIXELS_APA102_9_10
+#ifdef PIXELS_APA102_20_21
   FastLED.addLeds<APA102, 20, 21, BGR>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
 #endif
   LEDS.setBrightness(64);
 
   pinMode(DEBUG_LED_PIN, OUTPUT);
+
+  configure_radio();
+
+  DEBUG1_PRINTLN("*** Initializtion complete ***");
 }
 
 byte sensor_to_led(byte sensor) {
@@ -75,9 +81,9 @@ void loop() {
   leds[(current_led + 2) % NUM_LEDS_IN_CIRCLE] = CRGB(CHSV(current_led, 255,255)).nscale8(32);
   leds[(current_led + 2) % NUM_LEDS_IN_CIRCLE] = CRGB(CHSV(current_led, 255,255)).nscale8(16);
 
-  for (byte led = NUM_LEDS_IN_CIRCLE; led < NUM_LEDS; led++) {
-    leds[led] = CHSV(current_led-128, 255,255);
-  }
+//  for (byte led = NUM_LEDS_IN_CIRCLE; led < NUM_LEDS; led++) {
+//    leds[led] = CHSV(current_led-128, 255,255);
+//  }
 
   touch.readTouchInputs();
   for (int i = 0; i < 12; i++) {
@@ -98,11 +104,10 @@ void loop() {
     }
   }
 
-  FastLED.show();
+  /* Check the radio and possible send a heartbeat message */
+  handle_radio();
 
-  if (millis() % 2000 == 0) {
-    Serial.println("hi!");
-  }
+  FastLED.show();
 
   digitalWrite(DEBUG_LED_PIN, debug_led_state);
   debug_led_state = !debug_led_state;
