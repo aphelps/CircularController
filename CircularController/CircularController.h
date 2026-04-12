@@ -39,15 +39,13 @@ void update_poofers();
 
 /* All sensor info is recorded in a bit mask */
 extern uint32_t sensor_state;
+#define SET_SENSOR(i) sensor_state |= (1 << i)
+#define CHECK_SENSOR(i) (sensor_state & (1 << i))
 
-// XXX - Sensor macros go here?
-#define SWITCH_PIN_1 5
-#define SWITCH_PIN_2 6
-#define SWITCH_PIN_3 9
-#define SWITCH_PIN_4 10
+#define CHANGED_OFFSET 16
+#define SET_CHANGED(i) sensor_state |= (1 << (i + CHANGED_OFFSET))
+#define CHECK_CHANGED(i) (sensor_state & (1 << (i + CHANGED_OFFSET)))
 
-void initialize_switches();
-void sensor_switches();
 void calculate_pulse();
 
 extern MPR121 touch_sensor;

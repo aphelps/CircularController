@@ -62,8 +62,6 @@
 RFM69Socket rfm69;
 byte databuffer[SEND_BUFFER_SIZE];
 
-
-
 MPR121 touch_sensor; // MPR121 must be initialized after Wire.begin();
 uint16_t my_address = 0;
 
@@ -134,15 +132,11 @@ void setup() {
 
   init_modes(sockets, num_sockets);
 
-  touch_sensor.setThresholds(3, 1);
+  touch_sensor.setThresholds(15, 2);
 
-  /* Setup the sensors */
-  initialize_switches();
-
-  DEBUG2_PRINTLN("* Wickerman Fire Control Initialized *");
+  DEBUG2_PRINTLN("* CircularController Initialized *");
   DEBUG2_VALUELN(" Build=", CIRCULAR_CONTROLLER_BUILD);
   DEBUG_MEMORY(DEBUG_HIGH);
-
 
   DEBUG2_VALUE("POOF1_ADDRESS=", poofer1_address);
   DEBUG2_VALUE("POOF2_ADDRESS=", poofer2_address);
@@ -155,8 +149,6 @@ void setup() {
 void loop() {
   /* Check the sensor values */
   sensor_cap();
-
-  sensor_switches();
 
   handle_sensors();
 

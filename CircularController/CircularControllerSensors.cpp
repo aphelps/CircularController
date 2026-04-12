@@ -37,39 +37,14 @@ uint16_t poofer1_address = POOFER1_ADDRESS;
 uint16_t poofer2_address = POOFER2_ADDRESS;
 uint16_t lights_address = LIGHTS_ADDRESS;
 
-/******* Switches *************************************************************/
 
-#define NUM_SWITCHES 4
-boolean switch_states[NUM_SWITCHES] = { false, false, false, false };
-boolean switch_changed[NUM_SWITCHES] = { false, false, false, false };
-const byte switch_pins[NUM_SWITCHES] = {
-        SWITCH_PIN_1, SWITCH_PIN_2, SWITCH_PIN_3, SWITCH_PIN_4 };
+// XXX: These should be in some sort of state array
+boolean pilot_enabled = false;
+boolean poofer_enabled = false;
+boolean toggle_poofer_enabled = false;
 
-void initialize_switches(void) {
-  for (byte i = 0; i < NUM_SWITCHES; i++) {
-    pinMode(switch_pins[i], INPUT);
-  }
 
-  calculate_pulse();
-}
-
-void sensor_switches(void) {
-  for (byte i = 0; i < NUM_SWITCHES; i++) {
-    boolean value = (digitalRead(switch_pins[i]) == LOW);
-    if (value != switch_states[i]) {
-      switch_changed[i] = true;
-      data_changed = true;
-      switch_states[i] = value;
-      if (value) {
-        DEBUG5_VALUELN("Switch is on: ", i);
-      } else {
-        DEBUG5_VALUELN("Switch is off: ", i);
-      }
-    } else {
-      switch_changed[i] = false;
-    }
-  }
-}
+uint32_t sensor_state;
 
 /******* Capacitive Sensors ***************************************************/
 
@@ -84,6 +59,17 @@ void sensor_cap(void)
                           DEBUG5_VALUELN(" ms:", millis());
     );
     data_changed = true;
+
+    // Construct the sensor_state
+    sensor_state = 0;
+    for (byte i = 0; i < MPR121::MAX_SENSORS; i++) {
+      if (touch_sensor.touched(i)) {
+        SET_SENSOR(i);
+      }
+      if (touch_sensor.changed(i)) {
+        SET_CHANGED(i);
+      }
+    }
   }
 }
 
@@ -190,38 +176,42 @@ void checkPulse(uint8_t sensor, uint16_t address, uint8_t output,
 
 
 /* Convert between a sensor number and the LED associated with it */
-byte sensor_to_led(byte sensor) {
-  byte led = 0;
+uint8_t sensor_to_led(uint8_t sensor) {
+  uint8_t led;
 
-#if OBJECT_TYPE == OBJECT_TYPE_TOUCH_CONTROLLER
+#if OBJECT_TYPE == OBJECT_TYPE_CIRCULAR_CONTROLLER
   /*
    * Sensor  LED
-   * 11       0
-   * 10       1
-   *  9       2
-   *  8       3
-   *  7       4
-   *  6       5
-   *  5       11
-   *  4       10
-   *  3       9
-   *  2       8
-   *  1       7
-   *  0       6
+   * 10      10
+   * 9       11
+   * 8       0
+   * 7       1
+   * 6       2
+   * 5       3
+   * ...
    */
-  if (sensor > 5) {
-    led = (byte)11 - sensor;
-  } else {
-    led = sensor + (byte)6;
-  }
+  led = (20 - sensor) % 12;
 #endif
 
   return led;
 }
 
+/*
+ * Circular controller control system
+ *
+ * Poofers
+ * -------
+ *   To toggle poofer control mode:
+ *     - Hold only sensors 0,3,6,9 for 4 seconds
+ *   While in poofer control mode:
+ *     - Hold only sensors 3,9
+ */
+#define POOFER_CONTROL() (sensor_state == ((1 << 0) | (1 << 3) | (1 << 6) | (1 << 9)))
+
 void handle_sensors(void) {
   static unsigned long last_send = millis();
 
+#if 0
   /* Goblin Lights */
   if (switch_changed[LIGHTS_ON_SWITCH]) {
     if (switch_states[LIGHTS_ON_SWITCH]) {
@@ -269,10 +259,12 @@ void handle_sensors(void) {
     sendOff(poofer1_address, POOFER1_PILOT);
     sendOff(poofer2_address, POOFER1_PILOT);
   }
+#endif
+
 
   /*  Poofer Enable Switch */
-  if (switch_changed[POOFER_ENABLE_SWITCH]) {
-    if (switch_states[POOFER_ENABLE_SWITCH]) {
+  if (toggle_poofer_enabled) { // XXX: Get from something proper
+    if (poofer_enabled) {
       DEBUG1_PRINTLN("POOFERS ENABLED");
       setBlink();
     } else {
@@ -293,8 +285,7 @@ void handle_sensors(void) {
     }
   }
 
-  if (switch_states[POOFER_ENABLE_SWITCH] &&
-      switch_states[POOFER_PILOT_SWITCH]) {
+  if (poofer_enabled && pilot_enabled) {
     /* Poofers are enabled and the pilot is open */
 
     /*
@@ -626,7 +617,7 @@ void handle_sensors(void) {
   }
 #endif
 
-}
+} // END: handle_sensors()
 
 void update_poofers() {
 }

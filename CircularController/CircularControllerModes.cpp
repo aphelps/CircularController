@@ -144,7 +144,7 @@ boolean followup_actions() {
 
   for (byte i = 0; i < 12; i++) {
     if (touch_sensor.touched(i)) {
-      pixels.setPixelRGB(sensor_to_led(i), 255,0,0);
+      pixels.setPixelRGB((uint16_t)sensor_to_led(i), 255,0,0);
       if (touch_sensor.changed(i)) {
         /* Always set the value in case another method had changed it,
          * but we only need to force an update if this was a change

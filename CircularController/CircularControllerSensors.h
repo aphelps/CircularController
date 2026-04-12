@@ -28,6 +28,6 @@ extern uint8_t display_mode;
 extern uint8_t led_mode;
 extern uint8_t led_mode_value;
 
-byte sensor_to_led(byte sensor);
+uint8_t sensor_to_led(uint8_t sensor);
 
 #endif //CIRCULARCONTROLLER_CIRCULARCONTROLLERSENSORS_H
